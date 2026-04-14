@@ -1,0 +1,19 @@
+{
+  "name": "Quản lý áo dài",
+  "short_name": "Áo Dài",
+  "description": "Ứng dụng quản lý sản phẩm, tồn kho và đơn hàng áo dài trên điện thoại.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f5f5",
+  "theme_color": "#ee4d2d",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

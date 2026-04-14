@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#ee4d2d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Áo Dài">
+  <title>Quản lý áo dài</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="backdrop glow-a"></div>
+  <div class="backdrop glow-b"></div>
+
+  <div class="admin-shell">
+    <aside class="sidebar">
+      <div class="brand-block">
+        <div class="brand-mark">AD</div>
+        <div class="brand-copy">
+          <p class="eyebrow">Seller Mobile</p>
+          <h1>Quản lý áo dài</h1>
+          <p>Theo dõi mẫu áo dài, tồn kho và đơn hàng trên điện thoại theo kiểu seller app.</p>
+        </div>
+      </div>
+
+      <nav id="sectionNav" class="section-nav sidebar-section-nav" data-section-nav aria-label="Danh mục quản trị">
+        <button type="button" class="nav-button is-active" data-section-target="dashboard">Trang chủ</button>
+        <button type="button" class="nav-button" data-section-target="products">Mẫu</button>
+        <button type="button" class="nav-button" data-section-target="orders">Đơn</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span class="sidebar-label">Lần đồng bộ cuối</span>
+        <p id="syncNote" class="sync-note">Chưa đồng bộ</p>
+      </div>
+    </aside>
+
+    <main class="content-shell">
+      <header class="topbar">
+        <div class="topbar-copy">
+          <p class="eyebrow">Quản trị cửa hàng</p>
+          <h2 id="sectionTitle">Tổng quan</h2>
+          <p id="sectionDescription" class="section-description">
+            Xem nhanh tình hình cửa hàng rồi đi thẳng vào khu vực bạn cần thao tác.
+          </p>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="refreshButton" type="button" class="secondary-button">Làm mới</button>
+        </div>
+      </header>
+
+      <section class="view-section is-active" data-section-panel="dashboard">
+        <div class="summary-grid" aria-label="Tổng quan cửa hàng">
+          <article class="summary-card">
+            <span>Mẫu áo dài</span>
+            <strong id="totalProducts">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Tổng tồn</span>
+            <strong id="totalStock">0</strong>
+          </article>
+          <article class="summary-card">
+            <span>Đơn đã tạo</span>
+            <strong id="totalOrders">0</strong>
+          </article>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-kicker">Truy cập nhanh</p>
+                <h3>Chọn danh mục</h3>
+              </div>
+              <span class="pill muted">Luồng quản trị</span>
+            </div>
+
+            <div class="action-grid">
+              <button type="button" class="action-card" data-go-section="products">
+                <strong>Thêm mẫu</strong>
+                <span>Mở danh sách mẫu rồi bấm thêm mẫu mới.</span>
+              </button>
+              <button type="button" class="action-card" data-go-section="products">
+                <strong>Quản lý mẫu</strong>
+                <span>Nhập kho và bán hàng ngay trên từng mẫu áo dài.</span>
+              </button>
+              <button type="button" class="action-card" data-go-section="orders">
+                <strong>Tạo đơn</strong>
+                <span>Lên đơn nhiều sản phẩm trong một màn hình.</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="panel-kicker">Cần chú ý</p>
+                <h3>Sắp hết hàng</h3>
+              </div>
+              <span class="pill">Ưu tiên nhập thêm</span>
+            </div>
+
+            <div id="lowStockList" class="entity-list" aria-live="polite"></div>
+          </section>
+
+          <section class="panel panel-wide">
+            <div class="panel-head">
+              <div>
+                <p class="panel-kicker">Danh mục gần đây</p>
+                <h3>Mẫu mới nhất</h3>
+              </div>
+              <span class="pill muted">Mới thêm</span>
+            </div>
+
+            <div id="dashboardRecentList" class="entity-list" aria-live="polite"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="view-section" data-section-panel="products">
+        <section class="panel product-list-panel">
+          <div class="panel-head product-shell-head panel-actions-only">
+            <div class="section-inline-actions">
+              <button
+                id="toggleProductHelpButton"
+                type="button"
+                class="small-button support-toggle"
+                data-help-toggle="products"
+                aria-expanded="false"
+                aria-controls="productsHelpPanel"
+              >
+                Hỗ trợ
+              </button>
+              <button id="openProductModalButton" type="button" class="secondary-button">+ Thêm mẫu mới</button>
+            </div>
+          </div>
+
+          <div id="productsHelpPanel" class="section-help-panel" data-help-panel="products" hidden>
+            <strong>Cách dùng nhanh</strong>
+            <p>Bấm <strong>+ Thêm mẫu mới</strong> để tạo sản phẩm mới.</p>
+            <p>Bấm <strong>Nhập kho</strong> trên từng sản phẩm để thêm màu, size, giá và số lượng.</p>
+            <p>Bấm <strong>Bán</strong> để mở nhanh popup tạo đơn với sản phẩm đang chọn.</p>
+          </div>
+
+          <div class="product-list-toolbar">
+            <label class="field search-field seller-field-card">
+              <span>Tìm sản phẩm</span>
+              <input id="catalogSearch" type="search" placeholder="Tìm theo mã mẫu, tên, chất liệu, màu hoặc size">
+            </label>
+          </div>
+
+          <div id="productList" class="product-grid" aria-live="polite"></div>
+        </section>
+      </section>
+
+      <section class="view-section legacy-section" data-section-panel="inventory" hidden>
+        <div id="inventoryList" class="entity-list" aria-live="polite"></div>
+      </section>
+
+      <section class="view-section" data-section-panel="orders">
+        <section class="panel order-list-panel">
+          <div class="panel-head product-shell-head panel-actions-only">
+            <div class="section-inline-actions">
+              <button
+                id="toggleOrderHelpButton"
+                type="button"
+                class="small-button support-toggle"
+                data-help-toggle="orders"
+                aria-expanded="false"
+                aria-controls="ordersHelpPanel"
+              >
+                Hỗ trợ
+              </button>
+              <button id="openOrderModalButton" type="button" class="secondary-button">+ Tạo đơn</button>
+            </div>
+          </div>
+
+          <div id="ordersHelpPanel" class="section-help-panel" data-help-panel="orders" hidden>
+            <strong>Cách dùng nhanh</strong>
+            <p>Bấm <strong>+ Tạo đơn</strong> để tạo đơn mới cho khách.</p>
+            <p>Bấm <strong>Sửa</strong> để cập nhật thông tin khách hoặc các sản phẩm trong đơn.</p>
+            <p>Bấm <strong>Xóa</strong> để hủy đơn và hoàn lại tồn kho.</p>
+          </div>
+
+          <div class="product-list-toolbar">
+            <div id="ordersStatusTabs" class="orders-status-tabs" role="tablist" aria-label="Trạng thái đơn hàng">
+              <button
+                type="button"
+                id="ordersPendingTab"
+                class="orders-status-tab is-active"
+                data-order-filter="pending"
+                role="tab"
+                aria-selected="true"
+              >
+                Chưa giao ĐVVC
+              </button>
+              <button
+                type="button"
+                id="ordersSentTab"
+                class="orders-status-tab"
+                data-order-filter="sent"
+                role="tab"
+                aria-selected="false"
+              >
+                Đã giao ĐVVC
+              </button>
+            </div>
+          </div>
+
+          <div id="ordersList" class="entity-list" aria-live="polite"></div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <nav id="mobileSectionNav" class="section-nav mobile-section-nav" data-section-nav aria-label="Điều hướng nhanh">
+    <button type="button" class="nav-button is-active" data-section-target="dashboard">Trang chủ</button>
+    <button type="button" class="nav-button" data-section-target="products">Mẫu</button>
+    <button type="button" class="nav-button" data-section-target="orders">Đơn</button>
+  </nav>
+
+  <div id="toastViewport" class="toast-viewport" aria-live="polite" aria-atomic="false"></div>
+
+  <div id="productModal" class="modal-overlay" hidden aria-hidden="true">
+    <div class="modal-card seller-modal">
+      <div class="modal-head">
+        <div>
+          <p class="panel-kicker">Mẫu áo dài</p>
+          <h3>Thêm mẫu mới</h3>
+        </div>
+        <button id="closeProductModalButton" type="button" class="small-button">Đóng</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="productForm" class="form-grid seller-form">
+          <section class="seller-step">
+            <div class="seller-step-head">
+              <p class="panel-kicker">Bước 1</p>
+              <h4>Thông tin mẫu</h4>
+              <p class="helper-text">Giá mặc định sẽ tự đổ xuống khi thêm biến thể.</p>
+            </div>
+
+            <div class="seller-card-stack">
+              <label class="field seller-field-card">
+                <span>Tên áo dài</span>
+                <input id="productName" name="name" placeholder="Ví dụ: Áo dài cưới ánh ngọc" autocomplete="off" required>
+              </label>
+
+              <label class="field seller-field-card">
+                <span>Chất liệu</span>
+                <input id="productMaterial" name="material" placeholder="Ví dụ: Lụa tơ, gấm, voan..." autocomplete="off" required>
+              </label>
+
+              <label class="field seller-field-card">
+                <span>Giá mặc định</span>
+                <input id="productPrice" name="price" type="number" min="0" inputmode="numeric" placeholder="1500000" required>
+              </label>
+            </div>
+          </section>
+
+          <section class="seller-step">
+            <div class="seller-step-head">
+              <p class="panel-kicker">Bước 2</p>
+              <h4>Biến thể màu, size và giá</h4>
+              <p class="helper-text">Thêm từng biến thể và có thể nhập kho ban đầu ngay trong popup này.</p>
+            </div>
+
+            <div class="variant-builder">
+              <div class="seller-card-stack">
+                <div class="field-row variant-fields">
+                  <label class="field seller-field-card">
+                    <span>Màu</span>
+                    <input id="variantColor" name="variantColor" placeholder="Đỏ ruby" autocomplete="off">
+                  </label>
+
+                  <label class="field seller-field-card">
+                    <span>Size</span>
+                    <input id="variantSize" name="variantSize" placeholder="Ví dụ: M, 36, 38..." autocomplete="off">
+                  </label>
+                </div>
+
+                <div class="field-row variant-fields">
+                  <label class="field seller-field-card">
+                    <span>Giá của size này</span>
+                    <input id="variantPrice" name="variantPrice" type="number" min="0" inputmode="numeric" placeholder="1500000">
+                  </label>
+
+                  <label class="field seller-field-card">
+                    <span>Nhập kho ngay</span>
+                    <input id="variantQuantity" name="variantQuantity" type="number" min="0" step="1" inputmode="numeric" value="0" placeholder="0">
+                  </label>
+                </div>
+              </div>
+
+              <button id="addVariantButton" type="button" class="secondary-button">Thêm biến thể</button>
+
+              <div id="variantPreview" class="helper-text variant-preview">
+                Chưa có biến thể nào. Bạn có thể nhập tồn kho ban đầu ngay khi thêm biến thể.
+              </div>
+
+              <div id="variantDraftList" class="entity-list variant-draft-list" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section class="seller-step">
+            <div class="seller-step-head">
+              <p class="panel-kicker">Bước 3</p>
+              <h4>Ảnh sản phẩm</h4>
+              <p class="helper-text">Ảnh sẽ được nén trước khi tải lên để thao tác nhanh hơn trên điện thoại.</p>
+            </div>
+
+            <label class="field seller-field-card">
+              <span>Chọn ảnh từ điện thoại</span>
+                <input id="productImage" name="image" type="file" accept="image/*" required>
+            </label>
+
+            <section id="imagePreview" class="preview-card empty" aria-live="polite">
+              <div class="preview-placeholder">
+                <strong>Ảnh sẽ được nén trước khi tải lên.</strong>
+                <span>Chiều ngang tối đa 500px, chất lượng 0.7, mục tiêu dưới 300KB</span>
+              </div>
+            </section>
+          </section>
+
+          <div class="seller-submit-bar modal-submit-bar">
+            <div class="seller-submit-copy">
+              <strong id="productDraftCount">0 biến thể</strong>
+              <p id="productDraftStock">Tồn kho nhập ngay: 0</p>
+            </div>
+            <button id="productSubmitButton" type="submit" class="primary-button">Lưu mẫu áo dài</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="productDetailModal" class="modal-overlay" hidden aria-hidden="true">
+    <div class="modal-card seller-modal product-detail-modal">
+      <div class="modal-head">
+        <div>
+          <p class="panel-kicker">Chi tiết sản phẩm</p>
+          <h3 id="productDetailTitle">Chi tiết sản phẩm</h3>
+        </div>
+        <button id="closeProductDetailButton" type="button" class="small-button">Đóng</button>
+      </div>
+
+      <div id="productDetailBody" class="modal-body product-detail-body" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="stockModal" class="modal-overlay" hidden aria-hidden="true">
+    <div class="modal-card seller-modal">
+      <div class="modal-head">
+        <div>
+          <p class="panel-kicker">Nhập kho</p>
+          <h3>Thêm hàng cho mẫu áo dài</h3>
+          <p class="helper-text">Trong popup này bạn có thể thêm màu, size, giá và số lượng cho mẫu đang chọn.</p>
+        </div>
+        <button id="closeStockModalButton" type="button" class="small-button">Đóng</button>
+      </div>
+
+      <div class="modal-body">
+        <section id="stockModalProductCard" class="product-summary-card" aria-live="polite"></section>
+
+        <form id="stockForm" class="form-grid seller-form">
+          <section class="seller-step">
+            <div class="seller-step-head">
+              <p class="panel-kicker">Thông tin nhập kho</p>
+              <h4>Màu, size, giá và số lượng</h4>
+              <p class="helper-text">Nếu biến thể đã có thì hệ thống sẽ cộng thêm tồn kho. Nếu chưa có, hệ thống sẽ tạo biến thể mới.</p>
+            </div>
+
+            <span id="stockCurrentBadge" class="pill muted">Tổng tồn hiện tại: 0</span>
+
+            <div class="variant-builder">
+              <div class="seller-card-stack">
+                <div class="field-row variant-fields">
+                  <label class="field seller-field-card">
+                    <span>Màu</span>
+                    <input id="stockColor" name="stockColor" placeholder="Đỏ ruby" autocomplete="off">
+                  </label>
+
+                  <label class="field seller-field-card">
+                    <span>Size</span>
+                    <input id="stockSize" name="stockSize" placeholder="Ví dụ: M, 36, 38..." autocomplete="off">
+                  </label>
+                </div>
+
+                <div class="field-row variant-fields">
+                  <label class="field seller-field-card">
+                    <span>Giá của size này</span>
+                    <input id="stockPrice" name="stockPrice" type="number" min="0" inputmode="numeric" placeholder="1500000">
+                  </label>
+
+                  <label class="field seller-field-card">
+                    <span>Số lượng nhập</span>
+                    <input id="stockQuantity" name="stockQuantity" type="number" min="1" step="1" inputmode="numeric" value="1" placeholder="1">
+                  </label>
+                </div>
+              </div>
+
+              <div id="stockVariantHint" class="helper-text">
+                Chọn màu và size rồi thêm vào danh sách nhập kho.
+              </div>
+
+              <button id="addStockVariantButton" type="button" class="secondary-button">Thêm dòng nhập kho</button>
+
+              <div id="stockVariantPreview" class="helper-text variant-preview">
+                Chưa có dòng nhập kho nào.
+              </div>
+
+              <div id="stockVariantDraftList" class="entity-list variant-draft-list" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <div class="seller-submit-bar modal-submit-bar">
+            <div class="seller-submit-copy">
+              <strong id="stockDraftCount">0 dòng</strong>
+              <p id="stockDraftQuantity">Tổng số lượng nhập: 0</p>
+            </div>
+            <button id="stockSubmitButton" type="submit" class="primary-button">Lưu nhập kho</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="orderModal" class="modal-overlay" hidden aria-hidden="true">
+    <div class="modal-card seller-modal">
+      <div class="modal-head">
+        <div>
+          <p id="orderModalKicker" class="panel-kicker">Đơn hàng</p>
+          <h3 id="orderModalTitle">Tạo đơn hàng</h3>
+          <p id="orderModalMeta" class="helper-text">Điền thông tin khách hàng và thêm các sản phẩm vào đơn.</p>
+        </div>
+        <button id="closeOrderModalButton" type="button" class="small-button">Đóng</button>
+      </div>
+
+      <div class="modal-body">
+        <div id="orderForm" class="form-grid seller-form">
+          <section class="seller-step">
+            <div class="seller-step-head">
+              <p class="panel-kicker">Khách hàng</p>
+              <h4>Thông tin nhận hàng</h4>
+            </div>
+
+            <div class="form-grid customer-grid">
+              <label class="field seller-field-card">
+                <span>Tên khách hàng</span>
+                <input id="customerName" autocomplete="off" placeholder="Nguyễn Thị A" required>
+              </label>
+
+              <label class="field seller-field-card">
+                <span>Số điện thoại</span>
+                <input id="customerPhone" inputmode="tel" autocomplete="off" placeholder="0901234567" required>
+              </label>
+
+              <label class="field seller-field-card customer-address">
+                <span>Địa chỉ khách hàng</span>
+                <input id="customerAddress" autocomplete="off" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" required>
+              </label>
+
+              <label class="field seller-field-card">
+                <span>Trạng thái đơn</span>
+                <select id="orderStatus">
+                  <option value="pending_carrier">Chưa giao cho đơn vị vận chuyển</option>
+                  <option value="sent_to_carrier">Đã giao cho đơn vị vận chuyển</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="seller-step">
+            <div class="seller-step-head">
+              <p class="panel-kicker">Sản phẩm</p>
+              <h4>Thêm dòng sản phẩm</h4>
+            </div>
+
+            <form id="orderItemForm" class="form-grid">
+              <label class="field seller-field-card">
+                <span>Chọn sản phẩm</span>
+                <select id="orderProduct" required></select>
+              </label>
+
+              <div class="field-row">
+                <label class="field seller-field-card">
+                  <span>Số lượng</span>
+                  <input id="orderQuantity" type="number" min="1" step="1" inputmode="numeric" value="1" required>
+                </label>
+                <button id="addItemButton" type="submit" class="secondary-button align-end">Thêm dòng</button>
+              </div>
+            </form>
+
+            <div id="orderHint" class="helper-text">Chọn sản phẩm rồi thêm vào nháp đơn hàng.</div>
+            <div id="orderDraft" class="draft-list" aria-live="polite"></div>
+          </section>
+
+          <div class="seller-submit-bar modal-submit-bar">
+            <div class="seller-submit-copy">
+              <strong id="orderDraftTotal">0 sản phẩm</strong>
+              <p id="orderDraftSummary" class="helper-text">Chưa có dòng nào trong đơn.</p>
+            </div>
+            <button id="submitOrderButton" type="button" class="primary-button">Lưu đơn hàng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="orderDetailModal" class="modal-overlay" hidden aria-hidden="true">
+    <div class="modal-card seller-modal order-detail-modal">
+      <div class="modal-head">
+        <div>
+          <p class="panel-kicker">Chi tiết đơn</p>
+          <h3 id="orderDetailTitle">Chi tiết đơn hàng</h3>
+        </div>
+        <button id="closeOrderDetailButton" type="button" class="small-button">Đóng</button>
+      </div>
+
+      <div id="orderDetailBody" class="modal-body order-detail-body" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="loading-overlay" hidden aria-live="assertive" aria-busy="true">
+    <div class="loading-card">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <strong id="loadingTitle">Đang xử lý</strong>
+      <p id="loadingMessage">Vui lòng chờ trong giây lát...</p>
+    </div>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
