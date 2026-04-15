@@ -8,7 +8,7 @@ const SHEET_ORDER_ITEMS = "order_items";
 
 const PRODUCTS_HEADERS = ["SKU", "name", "material", "color", "size", "price", "image", "product_id"];
 const STOCK_HEADERS = ["SKU", "size", "quantity"];
-const ORDERS_HEADERS = ["order_id", "date", "customer_name", "customer_phone", "customer_address", "status"];
+const ORDERS_HEADERS = ["order_id", "date", "customer_name", "customer_phone", "customer_address", "status", "total_amount"];
 const ORDER_ITEMS_HEADERS = ["order_id", "SKU", "size", "quantity"];
 
 const ORDER_STATUS_PENDING = "pending_carrier";
@@ -59,20 +59,15 @@ function json(payload) {
 function addProductFull_(data) {
   const name = cleanString_(data.name);
   const material = cleanString_(data.material);
-  const price = Number(data.price);
-  const variants = normalizeVariants_(data.variants, price);
+  const variants = normalizeVariants_(data.variants);
   const image = data.image || {};
 
   if (!name || !material) {
     throw new Error("Thiếu thông tin sản phẩm bắt buộc");
   }
 
-  if (!Number.isFinite(price) || price < 0) {
-    throw new Error("Giá sản phẩm không hợp lệ");
-  }
-
   if (!variants.length) {
-    throw new Error("Phải có ít nhất một biến thể màu, size và giá");
+    throw new Error("Phải có ít nhất một biến thể màu và size");
   }
 
   if (!image.base64 || !image.fileName) {
@@ -170,7 +165,7 @@ function getOrders_() {
 
 function stockIn_(data) {
   const productId = cleanString_(data.productId);
-  const variants = normalizeVariants_(data.variants, data.price);
+  const variants = normalizeVariants_(data.variants);
   const sku = cleanString_(data.sku);
   const size = cleanString_(data.size);
   const quantity = Number(data.quantity);
@@ -271,9 +266,6 @@ function stockInByProduct_(productId, variants) {
         const stockEntry = stockIndex[stockKey];
         const nextQuantity = (stockEntry ? stockEntry.quantity : 0) + variant.quantity;
 
-        resources.productsSheet.getRange(matchedRow.__rowNumber, 6).setValue(variant.price);
-        matchedRow[5] = variant.price;
-
         if (stockEntry) {
           resources.stockSheet.getRange(stockEntry.rowNumber, 3).setValue(nextQuantity);
           stockEntry.quantity = nextQuantity;
@@ -295,7 +287,7 @@ function stockInByProduct_(productId, variants) {
         baseRow[2],
         variant.color,
         variant.size,
-        variant.price,
+        "",
         baseRow[6],
         productId
       ];
@@ -336,6 +328,7 @@ function createOrder_(data) {
   const customerPhone = cleanPhone_(data.customerPhone);
   const customerAddress = cleanString_(data.customerAddress);
   const status = normalizeOrderStatus_(data.status);
+  const totalAmount = Number(data.totalAmount);
   const items = normalizeOrderItems_(data.items);
 
   if (!customerName) {
@@ -348,6 +341,10 @@ function createOrder_(data) {
 
   if (!customerAddress) {
     throw new Error("Thiếu địa chỉ khách hàng");
+  }
+
+  if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+    throw new Error("Tổng tiền đơn hàng không hợp lệ");
   }
 
   if (!items.length) {
@@ -387,7 +384,7 @@ function createOrder_(data) {
 
     const orderId = generateOrderId_();
     const now = new Date().toISOString();
-    const orderRow = [orderId, now, customerName, customerPhone, customerAddress, status];
+    const orderRow = [orderId, now, customerName, customerPhone, customerAddress, status, totalAmount];
     appendRow_(resources.ordersSheet, orderRow);
 
     const orderItemRows = items.map(function(item) {
@@ -430,6 +427,7 @@ function updateOrder_(data) {
   const customerPhone = cleanPhone_(data.customerPhone);
   const customerAddress = cleanString_(data.customerAddress);
   const status = normalizeOrderStatus_(data.status);
+  const totalAmount = Number(data.totalAmount);
   const items = normalizeOrderItems_(data.items);
 
   if (!orderId) {
@@ -446,6 +444,10 @@ function updateOrder_(data) {
 
   if (!customerAddress) {
     throw new Error("Thiếu địa chỉ khách hàng");
+  }
+
+  if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+    throw new Error("Tổng tiền đơn hàng không hợp lệ");
   }
 
   if (!items.length) {
@@ -521,11 +523,12 @@ function updateOrder_(data) {
 
     persistStockChanges_(resources.stockSheet, stockIndex, Object.keys(changedStockKeys));
 
-    resources.ordersSheet.getRange(orderIndex + 2, 3, 1, 4).setValues([[
+    resources.ordersSheet.getRange(orderIndex + 2, 3, 1, 5).setValues([[
       customerName,
       customerPhone,
       customerAddress,
-      status
+      status,
+      totalAmount
     ]]);
 
     deleteRowsByNumber_(resources.orderItemsSheet, existingItemEntries.map(function(entry) {
@@ -542,7 +545,7 @@ function updateOrder_(data) {
     return {
       status: "OK",
       order: mapOrderRow_(
-        [orderId, orderRows[orderIndex][1], customerName, customerPhone, customerAddress, status],
+        [orderId, orderRows[orderIndex][1], customerName, customerPhone, customerAddress, status, totalAmount],
         buildOrderItemsPayload_(newOrderItemRows, productMap)
       ),
       updatedStocks: buildUpdatedStocksPayload_(stockIndex, Object.keys(changedStockKeys)),
@@ -1010,7 +1013,7 @@ function mapProductRow_(row, currentStock) {
     material: row[2] || "",
     color: row[3],
     size: row[4],
-    price: Number(row[5] || 0),
+    price: 0,
     image: row[6],
     productId: row[7] || row[0],
     currentStock: Number(currentStock || 0)
@@ -1018,17 +1021,11 @@ function mapProductRow_(row, currentStock) {
 }
 
 function mapCreatedProductPayload_(productId, name, material, imageUrl, variants) {
-  var prices = variants.map(function(item) {
-    return Number(item.price || 0);
-  });
-
   return {
     productId: productId,
     name: name,
     material: material,
     image: imageUrl,
-    priceMin: prices.length ? Math.min.apply(null, prices) : 0,
-    priceMax: prices.length ? Math.max.apply(null, prices) : 0,
     colors: variants.map(function(item) { return item.color; }).filter(uniqueValue_),
     sizes: variants.map(function(item) { return item.size; }).filter(uniqueValue_),
     variantCount: variants.length
@@ -1043,6 +1040,7 @@ function mapOrderRow_(row, items) {
     customerPhone: row[3] || "",
     customerAddress: row[4] || "",
     status: normalizeOrderStatus_(row[5]),
+    totalAmount: Number(row[6] || 0),
     items: items || []
   };
 }
@@ -1055,7 +1053,6 @@ function mapOrderItemPayload_(row, productRow) {
     name: productRow ? productRow[1] : "",
     material: productRow ? productRow[2] : "",
     color: productRow ? productRow[3] : "",
-    price: productRow ? Number(productRow[5] || 0) : 0,
     image: productRow ? productRow[6] : ""
   };
 }
@@ -1076,7 +1073,7 @@ function createVariantRows_(productId, name, material, variants, imageUrl) {
       material,
       variant.color,
       variant.size,
-      variant.price,
+      "",
       imageUrl,
       productId
     ];
@@ -1134,7 +1131,7 @@ function normalizeVariantKey_(color, size) {
   return (cleanString_(color) + "|" + cleanString_(size)).toLowerCase();
 }
 
-function normalizeVariants_(variants, fallbackPrice) {
+function normalizeVariants_(variants) {
   if (!Array.isArray(variants)) {
     return [];
   }
@@ -1144,19 +1141,11 @@ function normalizeVariants_(variants, fallbackPrice) {
   return variants.reduce(function(items, variant) {
     var color = cleanString_(variant && variant.color);
     var size = cleanString_(variant && variant.size);
-    var price = Number(variant && variant.price);
     var quantity = Number(variant && variant.quantity);
     var key = (color + "|" + size).toLowerCase();
 
     if (!color || !size) {
       throw new Error("Mỗi biến thể phải có màu và size");
-    }
-
-    if (!Number.isFinite(price) || price < 0) {
-      if (!Number.isFinite(Number(fallbackPrice)) || Number(fallbackPrice) < 0) {
-        throw new Error("Giá của biến thể không hợp lệ");
-      }
-      price = Number(fallbackPrice);
     }
 
     if (!Number.isInteger(quantity) || quantity < 0) {
@@ -1168,7 +1157,6 @@ function normalizeVariants_(variants, fallbackPrice) {
       items.push({
         color: color,
         size: size,
-        price: price,
         quantity: quantity
       });
     }
